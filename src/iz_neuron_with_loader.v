@@ -41,7 +41,7 @@ parameter CONST_140 = 140 * SCALE;       // Constant 140
 assign spike_detect = (v >= V_THRESH);
 
 // Intermediate membrane potential calculation - FIXED WIDTH TRUNCATION
-assign membrane_output = ((v - V_REST) >>> 6) & 7'h7F; // Mask to 7 bits
+assign membrane_output = ((v - V_REST) >>> 6) & 16'h007F; // Mask to 7 bits
 
 // Izhikevich computation with correct constants - FIXED WIDTHS
 always @(*) begin
