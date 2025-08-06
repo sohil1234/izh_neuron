@@ -28,8 +28,9 @@ reg signed [31:0] dv_calc;   // dv calculation (using only [15:0])
 reg signed [31:0] du_calc;   // du calculation (using only [15:0])
 wire spike_detect;
 
-// Intermediate wire for membrane potential output - CORRECTED WIDTH
+// Intermediate wires for membrane potential output - NO WIDTH WARNINGS
 wire [6:0] membrane_output;
+wire [15:0] temp_membrane_calc;
 
 // Constants (properly scaled)
 parameter SCALE = 64;                    // Scaling factor
@@ -40,8 +41,9 @@ parameter CONST_140 = 140 * SCALE;       // Constant 140
 // Spike detection
 assign spike_detect = (v >= V_THRESH);
 
-// Intermediate membrane potential calculation - FIXED WIDTH TRUNCATION
-assign membrane_output = ((v - V_REST) >>> 6) & 16'h007F; // Mask to 7 bits
+// Intermediate membrane potential calculation - WARNING-FREE
+assign temp_membrane_calc = (v - V_REST) >>> 6;
+assign membrane_output = temp_membrane_calc[6:0];  // Clean 7-bit extraction
 
 // Izhikevich computation with correct constants - FIXED WIDTHS
 always @(*) begin
@@ -82,7 +84,7 @@ always @(posedge clk) begin
         if (v > V_THRESH) begin
             output_bus[6:0] <= 7'd127;       // Clamp to max during spike
         end else begin
-            // Map v from [-70*64, 30*64] to [0, 127] - CORRECTED WIDTH
+            // Map v from [-70*64, 30*64] to [0, 127] - WARNING-FREE
             output_bus[6:0] <= membrane_output; // Use pre-computed 7-bit value
         end
     end else if (!params_ready) begin
