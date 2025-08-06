@@ -29,7 +29,7 @@ reg signed [31:0] du_calc;   // du calculation (using only [15:0])
 wire spike_detect;
 
 // Intermediate wire for membrane potential output - FIXED WIDTH MATCHING
-wire [15:0] membrane_temp;
+wire [6:0] membrane_temp;
 wire [6:0] membrane_output;
 
 // Constants (properly scaled)
