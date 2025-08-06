@@ -37,24 +37,23 @@ parameter CONST_140 = 140 * SCALE;       // Constant 140
 // Spike detection
 assign spike_detect = (v >= V_THRESH);
 
-// Izhikevich computation with correct constants
+// Izhikevich computation with correct constants - FIXED WIDTHS
 always @(*) begin
     // Calculate v² term: 0.04 * v²
-    // 0.04 * SCALE = 2.56 ≈ 3 (approximation for hardware efficiency)
     v_squared = (v * v) >>> 10;  // Scale down v² appropriately
     
-    // IZ equation: dv = 0.04v² + 5v + 140 - u + I
+    // IZ equation: dv = 0.04v² + 5v + 140 - u + I - FIXED WIDTHS
     dv_calc = (v_squared * 3) +              // 0.04v² term (≈ 3 * v²/1024)
               (v * 5) +                      // 5v term  
               CONST_140 -                    // 140 constant
-              u +                            // recovery variable
-              (stimulus_input * SCALE);      // input current (8-bit precision)
+              {{16{u[15]}}, u} +             // Sign-extend u to 32 bits
+              ({24'd0, stimulus_input} * SCALE); // Properly sized stimulus
     
-    // Recovery equation: du = a(bv - u)  
-    du_calc = (param_a * ((param_b * v - (u << 6)) >>> 6)) >>> 6;
+    // Recovery equation: du = a(bv - u) - FIXED WIDTHS
+    du_calc = (param_a * ((param_b * v - ({16'd0, u} << 6)) >>> 6)) >>> 6;
 end
 
-// State update with proper IZ dynamics
+// State update with proper IZ dynamics - FIXED WIDTHS
 always @(posedge clk) begin
     if (reset) begin
         v <= V_REST;           // Initialize to resting potential
@@ -67,18 +66,18 @@ always @(posedge clk) begin
             u <= u + param_d;               // Increment recovery by 'd'
             output_bus[7] <= 1'b1;           // Spike output
         end else begin
-            // Integrate equations
-            v <= v + (dv_calc >>> 8);        // Update membrane potential
-            u <= u + (du_calc >>> 6);       // Update recovery variable
+            // Integrate equations - FIXED WIDTHS
+            v <= v + dv_calc[15:0];          // Take only lower 16 bits
+            u <= u + du_calc[15:0];          // Take only lower 16 bits
             output_bus[7] <= 1'b0;           // No spike
         end
         
-        // Output membrane potential (map to 0-127 range)
+        // Output membrane potential (map to 0-127 range) - FIXED WIDTHS
         if (v > V_THRESH) begin
             output_bus[6:0] <= 7'd127;       // Clamp to max during spike
         end else begin
-            // Map v from [-70*64, 30*64] to [0, 127]
-            output_bus[6:0] <= ((v - V_REST) >>> 6) & 7'b1111111;
+            // Map v from [-70*64, 30*64] to [0, 127] - FIXED WIDTHS
+            output_bus[6:0] <= ((v - V_REST) >>> 6)[6:0];  // Take only 7 bits
         end
     end else if (!params_ready) begin
         // Hold outputs during parameter loading

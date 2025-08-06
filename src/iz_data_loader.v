@@ -72,7 +72,7 @@ always @(posedge clk) begin
     end else if (enable) begin
         case (current_state)
             IDLE: begin
-                if (load_enable_rising) begin  // Use edge detection
+                if (load_enable_rising) begin
                     current_state <= LOAD_A;
                     bit_count <= 3'd0;
                     shift_reg <= 8'd0;
@@ -85,9 +85,8 @@ always @(posedge clk) begin
                     shift_reg <= {shift_reg[6:0], serial_data_in};
                     bit_count <= bit_count + 1;
                     if (bit_count == 3'd7) begin
-                        // Scale and store parameter 'a'
-                        // Input range [0,255] -> a range [0.01, 0.1]
-                        param_a <= (shift_reg >> 4) + 1;  // Maps to ~[1,17]
+                        // Scale and store parameter 'a' - FIXED WIDTH
+                        param_a <= {8'd0, shift_reg[7:4]} + 16'd1;  // Properly sized
                         current_state <= LOAD_B;
                         bit_count <= 3'd0;
                         shift_reg <= 8'd0;
@@ -100,12 +99,11 @@ always @(posedge clk) begin
                     shift_reg <= {shift_reg[6:0], serial_data_in};
                     bit_count <= bit_count + 1;
                     if (bit_count == 3'd7) begin
-                        // Scale and store parameter 'b'
-                        // Input range [0,255] -> b range [-0.5, 0.3]
+                        // Scale and store parameter 'b' - FIXED WIDTH
                         if (shift_reg > 8'd127) begin
-                            param_b <= (shift_reg - 8'd128) >> 2;  // Positive b
+                            param_b <= ({8'd0, shift_reg} - 16'd128) >> 2;  // Properly sized
                         end else begin
-                            param_b <= -(8'd128 - shift_reg) >> 2; // Negative b
+                            param_b <= -((16'd128 - {8'd0, shift_reg}) >> 2); // Properly sized
                         end
                         current_state <= LOAD_C;
                         bit_count <= 3'd0;
@@ -119,9 +117,8 @@ always @(posedge clk) begin
                     shift_reg <= {shift_reg[6:0], serial_data_in};
                     bit_count <= bit_count + 1;
                     if (bit_count == 3'd7) begin
-                        // Scale and store parameter 'c'
-                        // Input range [0,255] -> c range [-80, -40]
-                        param_c <= -((shift_reg >> 2) + 40) * SCALE;
+                        // Scale and store parameter 'c' - FIXED WIDTH
+                        param_c <= -(({8'd0, shift_reg[7:2]} + 16'd40) * SCALE);  // Properly sized
                         current_state <= LOAD_D;
                         bit_count <= 3'd0;
                         shift_reg <= 8'd0;
@@ -134,9 +131,8 @@ always @(posedge clk) begin
                     shift_reg <= {shift_reg[6:0], serial_data_in};
                     bit_count <= bit_count + 1;
                     if (bit_count == 3'd7) begin
-                        // Scale and store parameter 'd'
-                        // Input range [0,255] -> d range [0, 10]
-                        param_d <= (shift_reg >> 4) * SCALE;
+                        // Scale and store parameter 'd' - FIXED WIDTH
+                        param_d <= {8'd0, shift_reg[7:4]} * SCALE;  // Properly sized
                         current_state <= READY;
                         params_ready <= 1'b1;
                     end
@@ -145,7 +141,7 @@ always @(posedge clk) begin
             
             READY: begin
                 // Parameters loaded and ready - stay here until new rising edge
-                if (load_enable_rising) begin  // Use edge detection
+                if (load_enable_rising) begin
                     // Start new loading cycle
                     current_state <= LOAD_A;
                     bit_count <= 3'd0;

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2024 Your Name
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 `default_nettype none
 
 module tt_um_iz_neuron (
@@ -55,7 +60,7 @@ iz_neuron_system iz_core (
     .params_ready(params_ready)
 );
 
-// List all unused inputs to prevent warnings (if any)
-wire _unused = &{1'b0};
+// Handle unused inputs to prevent warnings
+wire _unused = &{uio_in[7:2], 1'b0};  // Explicitly mark unused bits
 
 endmodule

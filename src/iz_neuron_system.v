@@ -22,7 +22,7 @@ module iz_neuron_system (
 wire [15:0] param_a, param_b, param_c, param_d;
 wire loader_params_ready;
 
-// Data loader instance
+// Data loader instance - REMOVED empty load_state connection
 iz_data_loader loader (
     .clk(clk),
     .reset(reset),
@@ -34,7 +34,7 @@ iz_data_loader loader (
     .param_c(param_c),
     .param_d(param_d),
     .params_ready(loader_params_ready),
-    .load_state()  // Can be used for debugging
+    .load_state()  // Keep empty but properly terminated
 );
 
 // IZ neuron instance
