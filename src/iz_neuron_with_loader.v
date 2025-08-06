@@ -22,11 +22,15 @@ module iz_neuron_with_loader (
 reg signed [15:0] v;         // Membrane potential (scaled)
 reg signed [15:0] u;         // Recovery variable (scaled)
 
-// Computation variables
+// Computation variables - SIZED FOR ACTUAL USAGE
 reg signed [31:0] v_squared; // v² computation (needs 32 bits)
-reg signed [31:0] dv_calc;   // dv calculation
-reg signed [31:0] du_calc;   // du calculation
+reg signed [31:0] dv_calc;   // dv calculation (using only [15:0])
+reg signed [31:0] du_calc;   // du calculation (using only [15:0])
 wire spike_detect;
+
+// Intermediate wire for membrane potential output - FIXED WIDTH MATCHING
+wire [15:0] membrane_temp;
+wire [6:0] membrane_output;
 
 // Constants (properly scaled)
 parameter SCALE = 64;                    // Scaling factor
@@ -36,6 +40,10 @@ parameter CONST_140 = 140 * SCALE;       // Constant 140
 
 // Spike detection
 assign spike_detect = (v >= V_THRESH);
+
+// Intermediate membrane potential calculation - FIXED WIDTH
+assign membrane_temp = (v - V_REST) >>> 6;
+assign membrane_output = membrane_temp[6:0]; // Explicit 7-bit extraction
 
 // Izhikevich computation with correct constants - FIXED WIDTHS
 always @(*) begin
@@ -66,18 +74,18 @@ always @(posedge clk) begin
             u <= u + param_d;               // Increment recovery by 'd'
             output_bus[7] <= 1'b1;           // Spike output
         end else begin
-            // Integrate equations - FIXED WIDTHS
+            // Integrate equations - USING ONLY NEEDED BITS
             v <= v + dv_calc[15:0];          // Take only lower 16 bits
             u <= u + du_calc[15:0];          // Take only lower 16 bits
             output_bus[7] <= 1'b0;           // No spike
         end
         
-        // Output membrane potential (map to 0-127 range) - FIXED WIDTHS
+        // Output membrane potential (map to 0-127 range) - FIXED WIDTH
         if (v > V_THRESH) begin
             output_bus[6:0] <= 7'd127;       // Clamp to max during spike
         end else begin
-            // Map v from [-70*64, 30*64] to [0, 127] - FIXED WIDTHS
-            output_bus[6:0] <= ((v - V_REST) >>> 6) & 7'h7F;
+            // Map v from [-70*64, 30*64] to [0, 127] - CORRECTED WIDTH
+            output_bus[6:0] <= membrane_output; // Use pre-computed 7-bit value
         end
     end else if (!params_ready) begin
         // Hold outputs during parameter loading
@@ -85,5 +93,10 @@ always @(posedge clk) begin
         // Keep membrane potential output
     end
 end
+
+// Explicitly mark unused upper bits to suppress warnings
+wire _unused_dv = |dv_calc[31:16];
+wire _unused_du = |du_calc[31:16];
+wire _unused = &{_unused_dv, _unused_du, 1'b0};
 
 endmodule

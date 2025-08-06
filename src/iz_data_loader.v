@@ -13,10 +13,8 @@ module iz_data_loader (
     output reg [15:0] param_b,     // Scaled parameter b  
     output reg [15:0] param_c,     // Scaled parameter c
     output reg [15:0] param_d,     // Scaled parameter d
-    output reg params_ready,       // Signal that parameters are loaded
-    
-    // Debug outputs
-    output wire [2:0] load_state
+    output reg params_ready        // Signal that parameters are loaded
+    // Removed load_state output to eliminate PINCONNECTEMPTY warning
 );
 
 // State machine for parameter loading
@@ -44,8 +42,6 @@ parameter DEFAULT_A = 16'd1;        // a = 0.02 * SCALE ≈ 1
 parameter DEFAULT_B = 16'd13;       // b = 0.2 * SCALE ≈ 13  
 parameter DEFAULT_C = -65 * SCALE;  // c = -65mV
 parameter DEFAULT_D = 2 * SCALE;    // d = 2mV
-
-assign load_state = current_state;
 
 // Edge detection for load_enable
 assign load_enable_rising = load_enable & ~load_enable_prev;
@@ -85,8 +81,8 @@ always @(posedge clk) begin
                     shift_reg <= {shift_reg[6:0], serial_data_in};
                     bit_count <= bit_count + 1;
                     if (bit_count == 3'd7) begin
-                        // Scale and store parameter 'a' - FIXED WIDTH
-                        param_a <= {8'd0, shift_reg[7:4]} + 16'd1;  // Properly sized
+                        // Scale and store parameter 'a' - FIXED WIDTH MATCHING
+                        param_a <= {{12{1'b0}}, shift_reg[7:4]} + 16'd1;  // Pad to 16 bits
                         current_state <= LOAD_B;
                         bit_count <= 3'd0;
                         shift_reg <= 8'd0;
@@ -99,11 +95,11 @@ always @(posedge clk) begin
                     shift_reg <= {shift_reg[6:0], serial_data_in};
                     bit_count <= bit_count + 1;
                     if (bit_count == 3'd7) begin
-                        // Scale and store parameter 'b' - FIXED WIDTH
+                        // Scale and store parameter 'b' - FIXED WIDTH MATCHING
                         if (shift_reg > 8'd127) begin
-                            param_b <= ({8'd0, shift_reg} - 16'd128) >> 2;  // Properly sized
+                            param_b <= ({{8{1'b0}}, shift_reg} - 16'd128) >> 2;  // Pad to 16 bits
                         end else begin
-                            param_b <= -((16'd128 - {8'd0, shift_reg}) >> 2); // Properly sized
+                            param_b <= -((16'd128 - {{8{1'b0}}, shift_reg}) >> 2); // Pad to 16 bits
                         end
                         current_state <= LOAD_C;
                         bit_count <= 3'd0;
@@ -117,8 +113,8 @@ always @(posedge clk) begin
                     shift_reg <= {shift_reg[6:0], serial_data_in};
                     bit_count <= bit_count + 1;
                     if (bit_count == 3'd7) begin
-                        // Scale and store parameter 'c' - FIXED WIDTH
-                        param_c <= -(({8'd0, shift_reg[7:2]} + 16'd40) * SCALE);  // Properly sized
+                        // Scale and store parameter 'c' - FIXED WIDTH MATCHING
+                        param_c <= -(({{10{1'b0}}, shift_reg[7:2]} + 16'd40) * SCALE);  // Pad to 16 bits
                         current_state <= LOAD_D;
                         bit_count <= 3'd0;
                         shift_reg <= 8'd0;
@@ -131,8 +127,8 @@ always @(posedge clk) begin
                     shift_reg <= {shift_reg[6:0], serial_data_in};
                     bit_count <= bit_count + 1;
                     if (bit_count == 3'd7) begin
-                        // Scale and store parameter 'd' - FIXED WIDTH
-                        param_d <= {8'd0, shift_reg[7:4]} * SCALE;  // Properly sized
+                        // Scale and store parameter 'd' - FIXED WIDTH MATCHING
+                        param_d <= {{12{1'b0}}, shift_reg[7:4]} * SCALE;  // Pad to 16 bits
                         current_state <= READY;
                         params_ready <= 1'b1;
                     end

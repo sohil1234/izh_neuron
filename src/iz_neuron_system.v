@@ -22,7 +22,7 @@ module iz_neuron_system (
 wire [15:0] param_a, param_b, param_c, param_d;
 wire loader_params_ready;
 
-// Data loader instance - REMOVED empty load_state connection
+// Data loader instance - REMOVED load_state connection completely
 iz_data_loader loader (
     .clk(clk),
     .reset(reset),
@@ -33,8 +33,8 @@ iz_data_loader loader (
     .param_b(param_b),
     .param_c(param_c),
     .param_d(param_d),
-    .params_ready(loader_params_ready),
-    .load_state()  // Keep empty but properly terminated
+    .params_ready(loader_params_ready)
+    // Removed .load_state() connection to eliminate PINCONNECTEMPTY warning
 );
 
 // IZ neuron instance
