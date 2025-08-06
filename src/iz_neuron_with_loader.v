@@ -94,9 +94,10 @@ always @(posedge clk) begin
     end
 end
 
-// Explicitly mark unused upper bits to suppress warnings
+// Explicitly mark unused upper bits to suppress ALL warnings
 wire _unused_dv = |dv_calc[31:16];
 wire _unused_du = |du_calc[31:16];
-wire _unused = &{_unused_dv, _unused_du, 1'b0};
+wire _unused_membrane = |temp_membrane_calc[15:7];  // Mark unused membrane calc bits
+wire _unused = &{_unused_dv, _unused_du, _unused_membrane, 1'b0};
 
 endmodule
