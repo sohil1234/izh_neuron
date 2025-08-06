@@ -77,7 +77,7 @@ always @(posedge clk) begin
             output_bus[6:0] <= 7'd127;       // Clamp to max during spike
         end else begin
             // Map v from [-70*64, 30*64] to [0, 127] - FIXED WIDTHS
-            output_bus[6:0] <= ((v - V_REST) >>> 6) & 7'h7F
+            output_bus[6:0] <= ((v - V_REST) >>> 6) & 7'h7F;
         end
     end else if (!params_ready) begin
         // Hold outputs during parameter loading
